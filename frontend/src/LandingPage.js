@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
 import { PencilIcon, TrashIcon, PlusIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { itemsService } from './services/api/endpoints';
 
 const LandingPage = () => {
   const [items, setItems] = useState([]);
@@ -27,15 +27,9 @@ const LandingPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/items/', { params: { ordering: '-id' } });
-      // Ensure data is always an array
-      const data = Array.isArray(response.data?.data) 
-        ? response.data.data 
-        : Array.isArray(response.data) 
-          ? response.data 
-          : [];
-      setItems(data);
-      setFilteredItems(data);
+      const response = await itemsService.getAll();
+      setItems(response.data);
+      setFilteredItems(response.data);
     } catch (err) {
       setError('Failed to load items. Please try again.');
       console.error('Error fetching items:', err);
@@ -43,6 +37,10 @@ const LandingPage = () => {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   useEffect(() => {
     fetchItems();
@@ -121,7 +119,7 @@ const LandingPage = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('/api/items/', formData);
+      await itemsService.create(formData);
       setIsModalOpen(false);
       setFormData({ name: '', category: '', description: '' });
       fetchItems();
@@ -134,7 +132,7 @@ const LandingPage = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.put(`/api/items/${currentItem.id}/`, formData);
+      const response = await itemsService.update(currentItem.id, formData);
       setItems(prev => prev.map(item => item.id === currentItem.id ? response.data : item));
       setFilteredItems(prev => prev.map(item => item.id === currentItem.id ? response.data : item));
       setIsModalOpen(false);
@@ -148,9 +146,8 @@ const LandingPage = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
-
     try {
-      await axios.delete(`/api/items/${id}/`);
+      await itemsService.delete(id);
       setItems(prev => prev.filter(item => item.id !== id));
       setFilteredItems(prev => prev.filter(item => item.id !== id));
     } catch (err) {
