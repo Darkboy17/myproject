@@ -2,7 +2,6 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-  "proxy": "https://resollectmyprojectapi.duckdns.org",
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@tailwindcss/forms": "^0.5.10",

@@ -28,7 +28,7 @@ const LandingPage = () => {
     setError(null);
     try {
       const response = await itemsService.getAll();
-      setItems(response.data);
+      setItems(response.data.data);
       setFilteredItems(response.data);
     } catch (err) {
       setError('Failed to load items. Please try again.');
@@ -37,10 +37,6 @@ const LandingPage = () => {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
 
   useEffect(() => {
     fetchItems();
@@ -67,15 +63,16 @@ const LandingPage = () => {
   }, [activeFilter, filterValue, items]);
 
   useEffect(() => {
-    // Apply pagination and grouping to filtered items
+    // Ensure filteredItems is always an array
+    const safeFilteredItems = Array.isArray(filteredItems) ? filteredItems : [];
+
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const paginatedItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+    const paginatedItems = safeFilteredItems.slice(indexOfFirstItem, indexOfLastItem);
 
     if (groupBy === 'none') {
       setDisplayItems(paginatedItems);
     } else {
-      // Group only the paginated items
       const grouped = paginatedItems.reduce((acc, item) => {
         const key = item[groupBy] || 'Uncategorized';
         if (!acc[key]) {
@@ -218,20 +215,28 @@ const LandingPage = () => {
   );
 
   const Pagination = () => {
-    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    // Safely calculate totalPages with fallbacks
+    const safeItemsLength = Array.isArray(filteredItems) ? filteredItems.length : 0;
+    const safeItemsPerPage = Number(itemsPerPage) || 10; // Fallback to 10 if invalid
+    const totalPages = Math.max(Math.ceil(safeItemsLength / safeItemsPerPage), 1);
 
+    // Don't show pagination if only 1 page
     if (totalPages <= 1) return null;
 
-    const pageNumbers = [];
+    // Calculate visible page range
     const maxVisiblePages = 5;
+    const currentSafePage = Math.min(Math.max(1, Number(currentPage) || 1), totalPages);
 
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let startPage = Math.max(1, currentSafePage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
+    // Adjust if we don't have enough pages to show
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
 
+    // Generate page numbers
+    const pageNumbers = [];
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
@@ -239,26 +244,37 @@ const LandingPage = () => {
     return (
       <div className="flex items-center justify-between mt-4">
         <div className="text-sm text-gray-700">
-          Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+          Showing <span className="font-medium">
+            {Math.min((currentSafePage - 1) * safeItemsPerPage + 1, safeItemsLength)}
+          </span> to{' '}
           <span className="font-medium">
-            {Math.min(currentPage * itemsPerPage, filteredItems.length)}
+            {Math.min(currentSafePage * safeItemsPerPage, safeItemsLength)}
           </span>{' '}
-          of <span className="font-medium">{filteredItems.length}</span> results
+          of <span className="font-medium">{safeItemsLength}</span> results
         </div>
+
         <div className="flex space-x-2">
+          {/* Previous Page Button */}
           <button
-            onClick={() => paginate(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className={`px-3 py-1 rounded-md ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            onClick={() => paginate(Math.max(1, currentSafePage - 1))}
+            disabled={currentSafePage === 1}
+            className={`px-3 py-1 rounded-md ${currentSafePage === 1
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
           >
             <ChevronLeftIcon className="h-4 w-4" />
           </button>
 
+          {/* First Page + Ellipsis */}
           {startPage > 1 && (
             <>
               <button
                 onClick={() => paginate(1)}
-                className={`px-3 py-1 rounded-md ${1 === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                className={`px-3 py-1 rounded-md ${1 === currentSafePage
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
               >
                 1
               </button>
@@ -266,32 +282,44 @@ const LandingPage = () => {
             </>
           )}
 
+          {/* Page Numbers */}
           {pageNumbers.map(number => (
             <button
               key={number}
               onClick={() => paginate(number)}
-              className={`px-3 py-1 rounded-md ${number === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+              className={`px-3 py-1 rounded-md ${number === currentSafePage
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
             >
               {number}
             </button>
           ))}
 
+          {/* Last Page + Ellipsis */}
           {endPage < totalPages && (
             <>
               {endPage < totalPages - 1 && <span className="px-2 py-1">...</span>}
               <button
                 onClick={() => paginate(totalPages)}
-                className={`px-3 py-1 rounded-md ${totalPages === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                className={`px-3 py-1 rounded-md ${totalPages === currentSafePage
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
               >
                 {totalPages}
               </button>
             </>
           )}
 
+          {/* Next Page Button */}
           <button
-            onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded-md ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            onClick={() => paginate(Math.min(totalPages, currentSafePage + 1))}
+            disabled={currentSafePage === totalPages}
+            className={`px-3 py-1 rounded-md ${currentSafePage === totalPages
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
           >
             <ChevronRightIcon className="h-4 w-4" />
           </button>
@@ -307,9 +335,10 @@ const LandingPage = () => {
           {groupBy === 'none' ? (
             <Table items={Array.isArray(displayItems) ? displayItems : []} />
           ) : (
+
             Object.keys(displayItems).map(key => (
               <div key={key}>
-                <h3>{key}</h3>
+                <h3 className='font-bold text-gray-700'>{key}</h3>
                 <Table items={Array.isArray(displayItems[key]) ? displayItems[key] : []} />
               </div>
             ))
