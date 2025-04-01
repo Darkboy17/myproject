@@ -1,0 +1,27 @@
+# Frontend (React/Vue/etc.)
+frontend/node_modules/
+frontend/.env
+frontend/dist/
+frontend/.cache/
+
+# Backend (Django)
+backend/__pycache__/
+backend/.env
+backend/*/migrations/
+backend/db.sqlite3
+backend/staticfiles/
+
+# Docker
+.env
+*.env
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# System
+.DS_Store
+
+venv/
