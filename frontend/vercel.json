@@ -1,0 +1,12 @@
+{
+    "rewrites": [
+      {
+        "source": "/api/:path*",
+        "destination": "https://resollectmyprojectapi.duckdns.org/api/:path*"
+      },
+      {
+        "source": "/:path*",
+        "destination": "https://resollectmyprojectapi.duckdns.org/:path*"
+      }
+    ]
+  }
